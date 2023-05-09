@@ -15,21 +15,33 @@
     </label>
 </div>
 <button @onclick="Send" disabled="@(!IsConnected)">Send</button>
-
-<hr>
-
 <ul id="messagesList">
     @foreach (var message in messages)
     {
         <li>@message</li>
     }
 </ul>
+<div class="form-group">
+    <label>
+        Room:
+        <input @bind="roomInput" size="50" />
+    </label>
+</div>
+<button @onclick="JoinWithOffer" disabled="@(!IsConnected)">Join Room</button>
+<div>
+    <video id="localVideo" width="640" height="480" playsinline autoplay style="transform:rotateY(180deg);background: #222;"></video>
+    <video id="remoteVideo" width="640" height="480" playsinline autoplay style="transform:rotateY(180deg);background: #222;"></video>
+</div>
 
 @code {
     private HubConnection hubConnection;
     private List<string> messages = new List<string>();
     private string userInput;
     private string messageInput;
+
+    [Inject] private IJSRuntime Js { get; set; }
+    private IJSObjectReference? Module { get; set; }
+    private string roomInput;
 
     protected override async Task OnInitializedAsync()
     {
@@ -39,22 +51,92 @@
 
         hubConnection.On<string, string>("ReceiveMessage", (user, message) =>
         {
-            var encodedMsg = $"{user}: {message}";
-            messages.Add(encodedMsg);
+            messages.Add($"{user}: {message}");
             StateHasChanged();
+        });
+
+        hubConnection.On<string, string, string>("ReceiveJoinMessage", async (user, offer, message) =>
+        {
+            string answer = string.Empty;
+
+            if (!string.Equals(userInput, user))
+            {
+                //messages.Add(message);
+                //Console.WriteLine("測試");
+                //try
+                //{
+                //    answerSDP = await this.Module.InvokeAsync<string>("getAnswer", offerSDP);
+                //    Console.WriteLine("測試2");
+                //}
+                //catch (Exception e)
+                //{
+                //    Console.WriteLine($"測試2Error,{e.ToString()}");
+                //    throw;
+                //}
+                //StateHasChanged();
+                //Console.WriteLine("測試1");
+
+
+                //await hubConnection.SendAsync("JoinAnswer", userInput, roomInput, answerSDP);
+                //Console.WriteLine("測試3");
+
+                messages.Add(message);
+                answer = await this.Module.InvokeAsync<string>("getAnswer", offer);
+                await hubConnection.SendAsync("JoinAnswer", userInput, roomInput, answer);
+                StateHasChanged();
+            }
+        });
+
+        hubConnection.On<string, string, string>("ReceiveAnswer", async (user, answer, message) =>
+        {
+            if (!string.Equals(userInput, user))
+            {
+                //messages.Add(message);
+                //try
+                //{
+                //    await this.Module.InvokeAsync<string>("setAnswer", answer);
+                //}
+                //catch (Exception e)
+                //{
+                //    Console.WriteLine($"測試2Error,{e.ToString()}");
+                //    throw;
+                //}
+
+                //StateHasChanged();
+
+                messages.Add(message);
+                await this.Module.InvokeAsync<string>("setAnswer", answer);
+                StateHasChanged();
+            }
         });
 
         await hubConnection.StartAsync();
     }
 
-    Task Send() =>
-        hubConnection.SendAsync("SendMessage", userInput, messageInput);
-
-    public bool IsConnected =>
-        hubConnection.State == HubConnectionState.Connected;
-
-    public async ValueTask DisposeAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        await hubConnection.DisposeAsync();
+        if (firstRender)
+        {
+            this.Module = await this.Js.InvokeAsync<IJSObjectReference>("import", $"./js/main.js?{Guid.NewGuid().ToString()}");
+            await this.Module.InvokeAsync<string>("connect", DotNetObjectReference.Create(this));
+        }
+    }
+
+    Task Send() => hubConnection.SendAsync("SendMessage", userInput, messageInput);
+
+    public bool IsConnected => hubConnection.State == HubConnectionState.Connected;
+
+    public async ValueTask DisposeAsync() => await hubConnection.DisposeAsync();
+
+    async Task JoinWithOffer()
+    {
+        var offerSDP = await this.Module.InvokeAsync<string>("getOffer");
+        await hubConnection.SendAsync("JoinRoom", userInput, roomInput, offerSDP);
+    }
+
+    [JSInvokable]
+    public async Task HandleCandidate(string icecandidate)
+    {
+        await this.Module.InvokeAsync<string>("handleCandidate", icecandidate);
     }
 }
