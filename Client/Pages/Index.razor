@@ -27,7 +27,8 @@
         <input @bind="roomInput" size="50" />
     </label>
 </div>
-<button @onclick="JoinWithOffer" disabled="@(!IsConnected)">Join Room</button>
+@*<button @onclick="JoinWithOffer" disabled="@(!IsConnected)">Join Room</button>*@
+<button @onclick="JoinRoom" disabled="@(!IsConnected)">Join Room</button>
 <div>
     <video id="localVideo" width="640" height="480" playsinline autoplay style="transform:rotateY(180deg);background: #222;"></video>
     <video id="remoteVideo" width="640" height="480" playsinline autoplay style="transform:rotateY(180deg);background: #222;"></video>
@@ -55,59 +56,61 @@
             StateHasChanged();
         });
 
-        hubConnection.On<string, string, string>("ReceiveJoinMessage", async (user, offer, message) =>
+        // 當B進入，A會先去產生offer, 傳送給群組
+        hubConnection.On<string, string>("ReceiveJoinMessage", async (user, message) =>
         {
-            string answer = string.Empty;
-
-            if (!string.Equals(userInput, user))
+            try
             {
-                //messages.Add(message);
-                //Console.WriteLine("測試");
-                //try
-                //{
-                //    answerSDP = await this.Module.InvokeAsync<string>("getAnswer", offerSDP);
-                //    Console.WriteLine("測試2");
-                //}
-                //catch (Exception e)
-                //{
-                //    Console.WriteLine($"測試2Error,{e.ToString()}");
-                //    throw;
-                //}
-                //StateHasChanged();
-                //Console.WriteLine("測試1");
-
-
-                //await hubConnection.SendAsync("JoinAnswer", userInput, roomInput, answerSDP);
-                //Console.WriteLine("測試3");
-
-                messages.Add(message);
-                answer = await this.Module.InvokeAsync<string>("getAnswer", offer);
-                await hubConnection.SendAsync("JoinAnswer", userInput, roomInput, answer);
-                StateHasChanged();
+                if (!string.Equals(userInput, user))
+                {
+                    messages.Add(message);
+                    var offer = await this.Module.InvokeAsync<string>("getOffer");
+                    await hubConnection.SendAsync("SendOffer", userInput, roomInput, offer);
+                }
             }
+            catch (Exception e)
+            {
+                messages.Add(e.Message);
+            }
+            StateHasChanged();
         });
 
-        hubConnection.On<string, string, string>("ReceiveAnswer", async (user, answer, message) =>
+        // B 收到去 set 遠端的 offer, 並產生 answwer 讓 A 來用
+        hubConnection.On<string, string, string>("ReceiveOfferMessage", async (user, offer, message) =>
         {
-            if (!string.Equals(userInput, user))
+            try
             {
-                //messages.Add(message);
-                //try
-                //{
-                //    await this.Module.InvokeAsync<string>("setAnswer", answer);
-                //}
-                //catch (Exception e)
-                //{
-                //    Console.WriteLine($"測試2Error,{e.ToString()}");
-                //    throw;
-                //}
-
-                //StateHasChanged();
-
-                messages.Add(message);
-                await this.Module.InvokeAsync<string>("setAnswer", answer);
-                StateHasChanged();
+                if (!string.Equals(userInput, user))
+                {
+                    messages.Add(message);
+                    var answer = await this.Module.InvokeAsync<string>("getAnswer", offer);
+                    await hubConnection.SendAsync("SendAnswer", userInput, roomInput, answer);
+                }
             }
+            catch (Exception e)
+            {
+                messages.Add(e.Message);
+            }
+
+            StateHasChanged();
+        });
+
+        hubConnection.On<string, string, string>("ReceiveAnswerMessage", async (user, answer, message) =>
+        {
+            try
+            {
+                if (!string.Equals(userInput, user))
+                {
+                    messages.Add(message);
+                    await this.Module.InvokeAsync<string>("setAnswer", answer);
+                }
+            }
+            catch (Exception e)
+            {
+                messages.Add(e.Message);
+            }
+
+            StateHasChanged();
         });
 
         await hubConnection.StartAsync();
@@ -128,15 +131,14 @@
 
     public async ValueTask DisposeAsync() => await hubConnection.DisposeAsync();
 
-    async Task JoinWithOffer()
-    {
-        var offerSDP = await this.Module.InvokeAsync<string>("getOffer");
-        await hubConnection.SendAsync("JoinRoom", userInput, roomInput, offerSDP);
-    }
-
     [JSInvokable]
     public async Task HandleCandidate(string icecandidate)
     {
         await this.Module.InvokeAsync<string>("handleCandidate", icecandidate);
+    }
+
+    async Task JoinRoom()
+    {
+        await hubConnection.SendAsync("JoinRoom", userInput, roomInput);
     }
 }

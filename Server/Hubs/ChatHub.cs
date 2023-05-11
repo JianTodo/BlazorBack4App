@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.SignalR;
+﻿using System;
+using Microsoft.AspNetCore.SignalR;
 
 namespace BlazorApp.Server.Hubs
 {
@@ -9,15 +10,20 @@ namespace BlazorApp.Server.Hubs
             await Clients.All.SendAsync("ReceiveMessage", user, message);
         }
 
-        public async Task JoinRoom(string user, string roomName,string offer)
+        public async Task JoinRoom(string user, string roomName)
         {
             await Groups.AddToGroupAsync(Context.ConnectionId, roomName);
-            await Clients.Group(roomName).SendAsync("ReceiveJoinMessage", user, offer, $"{user} Join");
+            await Clients.Group(roomName).SendAsync("ReceiveJoinMessage", user, $"{user} Join");
         }
 
-        public async Task JoinAnswer(string user, string roomName, string answer)
+        public async Task SendOffer(string user, string roomName, string offer)
         {
-            await Clients.Group(roomName).SendAsync("ReceiveAnswer", user, answer, $"{user} Get Answer");
+            await Clients.Group(roomName).SendAsync("ReceiveOfferMessage", user, offer, $"{user} Send Offer");
+        }
+
+        public async Task SendAnswer(string user, string roomName, string answer)
+        {
+            await Clients.Group(roomName).SendAsync("ReceiveAnswerMessage", user, answer, $"{user} Send Answer");
         }
     }
 }

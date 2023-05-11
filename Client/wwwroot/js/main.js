@@ -32,7 +32,6 @@ var connect = function (cSharpObj) {
                 message.sdpMid = e.candidate.sdpMid;
                 message.sdpMLineIndex = e.candidate.sdpMLineIndex;
             }
-            // signaling.postMessage(message);
             cSharpObj.invokeMethodAsync('HandleCandidate', JSON.stringify(message));
         };
 
@@ -54,13 +53,9 @@ var getOffer = async function () {
 }
 
 var getAnswer = async function (offer) {
-    // console.log('T0');
     await pc.setRemoteDescription(JSON.parse(offer));
-    // console.log('T1');
     const answer = await pc.createAnswer();
-    // console.log('T2');
     await pc.setLocalDescription(answer);
-    // console.log('T3');
     return JSON.stringify(answer);
 }
 
@@ -73,14 +68,12 @@ var handleCandidate = async function (candidate) {
         console.error('no peerconnection');
         return;
     }
-    //await pc.addIceCandidate(JSON.parse(candidate));
     if (!candidate.candidate) {
         await pc.addIceCandidate(null);
     } else {
         await pc.addIceCandidate(candidate);
     }
 }
-
 
 export {
     connect,
