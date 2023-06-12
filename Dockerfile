@@ -2,7 +2,7 @@ FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build
 WORKDIR /app
 COPY . ./
 RUN dotnet publish "./Server/BlazorApp.Server.csproj" -c Release -o output
-COPY --from=build /app/output/wwwroot .
+COPY --from=build /app/output .
 ENTRYPOINT ["dotnet", "BlazorApp.Server.dll"]
 EXPOSE 80
 
