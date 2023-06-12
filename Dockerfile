@@ -3,7 +3,7 @@ WORKDIR /app
 EXPOSE 80
 COPY . .
 RUN dotnet build "BlazorApp.Server.csproj" -c Release -o /app/publish /p:UseAppHost=false
-COPY --from=publish /app/publish .
+COPY --from=build /app/publish .
 ENTRYPOINT ["dotnet", "BlazorApp.Server.dll"]
 
 
