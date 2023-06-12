@@ -1,6 +1,6 @@
 FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build
-RUN apk update
-RUN apk add nodejs npm
+#RUN apk update
+#RUN apk add nodejs npm
 WORKDIR /app
 COPY . ./
 #RUN npm --prefix Web install
