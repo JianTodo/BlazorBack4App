@@ -1,10 +1,10 @@
 FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build
-RUN apk add nodejs
-RUN apk add npm
+RUN apk update
+RUN apk add nodejs npm
 WORKDIR /app
 COPY . ./
-RUN npm --prefix Web install
-RUN dotnet publish "Web/BlazorApp.Server.csproj" -c Release -o output
+#RUN npm --prefix Web install
+RUN dotnet publish "./Server/BlazorApp.Server.csproj" -c Release -o output
 
 FROM nginx:alpine
 WORKDIR /user/share/nginx/html
