@@ -9,7 +9,7 @@ RUN dotnet publish "Web/BlazorApp.Server.csproj" -c Release -o output
 FROM nginx:alpine
 WORKDIR /user/share/nginx/html
 COPY --from=build /app/output/wwwroot .
-COPY Web/nginx.conf /etc/nginx/nginx.conf
+COPY ./nginx.conf /etc/nginx/nginx.conf
 EXPOSE 80
 
 #FROM mcr.microsoft.com/dotnet/aspnet:6.0 AS base
