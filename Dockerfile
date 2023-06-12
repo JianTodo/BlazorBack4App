@@ -2,7 +2,7 @@ FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build
 WORKDIR /app
 EXPOSE 80
 COPY . .
-RUN dotnet build "BlazorApp.Server.csproj" -c Release -o /app/publish /p:UseAppHost=false
+RUN dotnet build "./Server/BlazorApp.Server.csproj" -c Release -o /app/publish /p:UseAppHost=false
 FROM base AS final
 WORKDIR /app
 COPY --from=build /app/publish .
